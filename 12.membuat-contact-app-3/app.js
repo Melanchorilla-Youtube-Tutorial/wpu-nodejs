@@ -1,14 +1,73 @@
+const yargs = require('yargs');
 const contacts = require('./contacts');
 
-const main = async () => {
-    const nama = await contacts.tulisPertanyaan('Masukkan nama anda: ');
-    const email = await contacts.tulisPertanyaan('Masukkan email anda: ');
-    const noHP = await contacts.tulisPertanyaan('Masukkan noHP anda: ');
+// menambahkan contact
+yargs.command({
+    command: 'add',
+    describe: 'Menambahkan contact baru',
+    builder: {
+        nama: {
+            describe: "Nama lengkap",
+            demandOption: true,
+            type: 'string'
+        },
+        email: {
+            describe: "Email",
+            demandOption: false,
+            type: 'string' 
+        },
+        noHP: {
+            describe: "Nomor HP",
+            demandOption: true,
+            type: 'string' 
+        },
+    },
+    handler(argv) {
+        contacts.simpanContact(argv.nama, argv.email, argv.noHP)
+    },
+}).demandCommand();
 
-    contacts.simpanContact(nama, email, noHP);
-}
+// menampilkan daftar semua nama contact
+yargs.command({
+    command: 'list',
+    describe: 'Menampilkan semua nama & noHP contact',
+    handler() {
+        contacts.listContact();
+    },
+});
 
-main();
+// menampilkan detail sebuah contact
+yargs.command({
+    command: 'detail',
+    describe: 'Menampilkan sebuah contact berdasarkan nama',
+    builder: {
+        nama: {
+            describe: "Nama lengkap",
+            demandOption: true,
+            type: 'string'
+        },
+    },
+    handler(argv) {
+        contacts.detailContact(argv.nama);
+    },
+});
 
 
+// menghapus contact berdasarkan nama
+yargs.command({
+    command: 'delete',
+    describe: 'Menghapus contact berdasarkan nama',
+    builder: {
+        nama: {
+            describe: "Nama lengkap",
+            demandOption: true,
+            type: 'string'
+        },
+    },
+    handler(argv) {
+        contacts.deleteContact(argv.nama);
+    },
+});
 
+
+yargs.parse();
