@@ -14,6 +14,7 @@ if(!fs.existsSync(dataPath)) {
     fs.writeFileSync(dataPath, '[]', 'utf-8');
 }
 
+// membaca isi data contact.json
 const loadContact = () => {
     const fileBuffer = fs.readFileSync('data/contacts.json', 'utf8');
     const contacts = JSON.parse(fileBuffer);
