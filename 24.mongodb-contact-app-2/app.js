@@ -1,6 +1,9 @@
 const express = require('express');
 const expressLayouts = require('express-ejs-layouts');
 
+const {body, validationResult, check} = require('express-validator');
+const methodOverride = require('method-override');
+
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
 const flash = require('connect-flash');
@@ -10,6 +13,9 @@ const Contact = require('./model/contact');
 
 const app = express();
 const port = 3000;
+
+// setup method override
+app.use(methodOverride('_method'));
 
 // gunakan ejs
 app.set('view engine', 'ejs');
@@ -33,7 +39,7 @@ app.use(flash());
 app.use(express.static('public'));
 app.use(express.urlencoded({extended: true}));
 
-app.get('/', (request, response) => {
+app.get('/', (req, res) => {
     const mahasiswa = [
         {
             nama: 'Dicky Kamaludin B',
@@ -49,41 +55,159 @@ app.get('/', (request, response) => {
         }
 
     ];
-    response.render('index', {
+    res.render('index', {
         layout: 'layouts/main-layout',
         nama: 'Dicky Kamaludin', 
         title: 'Halaman Home', 
         mahasiswa: mahasiswa});
 });
 
-app.get('/about', (request, response) => {
-    response.render('about', {
+app.get('/about', (req, res) => {
+    res.render('about', {
         layout: 'layouts/main-layout',
         title: "Halaman About"
     });
 });
 
-app.get('/contact', async (request, response) => {
+app.get('/contact', async (req, res) => {
 
     // Contact.find().then((contact) => {
-    //     response.send(contact);
+    //     res.send(contact);
     // })
 
     const contacts = await Contact.find();
 
-    response.render('contact', {
+    res.render('contact', {
         layout: 'layouts/main-layout',
         title: "Halaman Contact",
         contacts: contacts,
-        msg: request.flash('msg')
+        msg: req.flash('msg')
     });
 });
 
-// halaman detail contact
-app.get('/contact/:nama', async (request, response) => {
-    const contact = await Contact.findOne({nama: request.params.nama});
+// halaman form tambah data contact
+app.get('/contact/add', (req, res) => {
+    res.render('add-contact', {
+        layout: 'layouts/main-layout',
+        title: 'Form Tambah Data Contact',
+    });
+});
+
+
+// proses data contact
+app.post('/contact',
+    [
+        body('nama').custom(async (value) => {
+            const duplikat = await Contact.findOne({nama: value});
+            if(duplikat) {
+                throw new Error('Nama contact sudah digunakan!');
+            }
+            return true;
+        }),
+        check('email', 'E-mail tidak valid!').isEmail(),
+        check('nohp', 'No. HP tidak valid!').isMobilePhone('id-ID')
+    ],
+    (req, res) => {
+        const errors = validationResult(req);
+        if(!errors.isEmpty()) {
+            // return respose.status(400).json({errors: errors.array()});
+            res.render('add-contact', {
+                title: 'Form Tambah Data Contact',
+                layout: 'layouts/main-layout',
+                errors: errors.array()
+            })
+        }
+        else {
+            Contact.insertMany(req.body, (error, result) => {
+                // kirimkan flash message
+                req.flash('msg', 'Data contact berhasil ditambahkan!');
+                res.redirect('/contact');
+            });   
+        }
+});
+
+// proses delete contact
+// app.get('/contact/delete/:nama', async (req, res) => {
+//     const contact = await Contact.findOne({nama: req.params.nama});
     
-    response.render('detail', {
+//     // jika contact tidak ada
+//     if(!contact) {
+//         res.status(404);
+//         res.send('<h1>404</h1>');
+//     } else {
+//         Contact.deleteOne({_id: contact._id}).then((result) => {
+//             req.flash('msg', 'Data contact berhasil dihapus!');
+//             res.redirect('/contact');
+//         });
+//     }
+// });
+
+app.delete('/contact', (req,res) => {
+    Contact.deleteOne({nama: req.body.nama}).then((result) => {
+        req.flash('msg', 'Data contact berhasil dihapus!');
+        res.redirect('/contact');
+    });
+});
+
+// form ubah data contact
+app.get('/contact/edit/:nama', async (req, res) => {
+    const contact = await Contact.findOne({nama: req.params.nama});
+
+    res.render('edit-contact', {
+        layout: 'layouts/main-layout',
+        title: 'Form Ubah Data Contact',
+        contact: contact
+    });
+});
+
+// proses ubah data contact
+app.put('/contact',
+    [
+        body('nama').custom(async (value, {req}) => {
+            const duplikat = await Contact.findOne({nama: value});
+            if(value !== req.body.oldNama && duplikat) {
+                throw new Error('Nama contact sudah digunakan!');
+            }
+            return true;
+        }),
+        check('email', 'E-mail tidak valid!').isEmail(),
+        check('nohp', 'No. HP tidak valid!').isMobilePhone('id-ID')
+    ],
+    (req, res) => {
+        const errors = validationResult(req);
+        if(!errors.isEmpty()) {
+            res.render('edit-contact', {
+                title: 'Form Ubah Data Contact',
+                layout: 'layouts/main-layout',
+                errors: errors.array(),
+                contact: req.body
+            })
+        }
+        else {
+            Contact.updateOne(
+                {
+                    _id: req.body._id
+                },
+                {
+                    $set: {
+                        nama: req.body.nama,
+                        email: req.body.email,
+                        nohp: req.body.nohp
+                    }
+                }
+            ).then((result) => {
+                // kirimkan flash message
+                req.flash('msg', 'Data contact berhasil diubah!');
+                res.redirect('/contact');
+            });
+        }
+});
+
+// halaman detail contact
+app.get('/contact/:nama', async (req, res) => {
+    const contact = await Contact.findOne({nama: req.params.nama});
+    
+    res.render('detail', {
         layout: 'layouts/main-layout',
         title: "Halaman Detail Contact",
         contact: contact

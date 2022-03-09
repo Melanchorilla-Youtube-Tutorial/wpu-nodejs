@@ -11,7 +11,8 @@
                     </ul>
                 </div>
             <% } %>
-            <form method="post" action="/contact/update">
+            <form method="post" action="/contact?_method=PUT">
+                <input type="hidden" name="_id" value="<%= contact._id %>">
                 <input type="hidden" name="oldNama" value="<%= (contact.oldNama) ? contact.oldNama : contact.nama %>">
                 <div class="mb-3">
                   <label for="nama" class="form-label">Nama</label>
@@ -23,7 +24,7 @@
                 </div>
                 <div class="mb-3">
                     <label for="noHP" class="form-label">No. HP</label>
-                    <input type="number" class="form-control" id="noHP" name="noHP" value="<%= contact.noHP %>" required>
+                    <input type="number" class="form-control" id="nohp" name="nohp" value="<%= contact.nohp %>" required>
                 </div>
                 <button type="submit" class="btn btn-primary">Ubah Data Contact</button>
               </form>
